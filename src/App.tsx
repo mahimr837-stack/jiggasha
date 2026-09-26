@@ -11,28 +11,39 @@ import { Workspace } from './components/Workspace';
 import { ProviderSetupPage } from './components/ProviderSetupPage';
 import { AuthPage } from './components/AuthPage';
 import { ProfilePage } from './components/ProfilePage';
+import { auth, getUserData, saveUserData } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { getRandomAvatar } from './data/avatars';
 import { TEXTBOOK_CORPUS } from './data/textbookCorpus';
 
 const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const DEFAULT_SESSION: WorkspaceSession = {
-  id: 'session-kinematics-1',
-  title: 'Kinematics & Projectile Range',
-  subject: 'Physics 1st Paper',
+  id: 'session-quantum-1',
+  title: 'Quantum Computing Overview',
+  subject: 'AI Assistant',
   createdAt: Date.now() - 1000 * 60 * 30,
   updatedAt: Date.now() - 1000 * 60 * 30,
   turns: [
     {
       id: 'turn-init-1',
-      userQuery: 'A stone is projected at an angle of 30° with an initial velocity of 40 m/s from a cliff of height 20 m. Calculate the time of flight and horizontal range.',
+      userQuery: 'Explain quantum computing in simple terms for a general audience.',
       timestamp: Date.now() - 1000 * 60 * 30,
       status: 'complete',
       response: {
-        questionRestatement: 'Projected stone launched from cliff top:\n• Initial velocity: u = 40 m/s\n• Projection angle: θ = 30° above horizontal\n• Launch height: h₀ = 20 m\n• Target unknowns: Time of flight (T) until ground impact, and total horizontal range (X). Take g = 9.8 m/s².',
-        solution: '1. Resolve velocity components at origin (cliff edge):\n   u_x = u cos 30° = 40 × (√3 / 2) ≈ 34.64 m/s\n   u_y = u sin 30° = 40 × 0.50 = 20.00 m/s\n\n2. Vertical displacement to ground (y = -20 m):\n   y = u_y · t - ½ g t²\n   -20 = 20 t - 4.9 t²\n   4.9 t² - 20 t - 20 = 0\n\n   Using quadratic formula:\n   t = [20 ± √(20² - 4(4.9)(-20))] / [2 × 4.9]\n   t = [20 ± √(400 + 392)] / 9.8\n   t = [20 + 28.14] / 9.8 ≈ 4.91 s (rejecting negative root)\n\n3. Total horizontal distance from cliff base:\n   X = u_x · t = 34.64 m/s × 4.91 s ≈ 170.08 m.',
-        explanation: 'According to Galileo\'s principle of independent orthogonal motions, the horizontal component of velocity remains constant because no horizontal force acts on the stone (ignoring air resistance).\n\nThe vertical motion is governed strictly by uniform gravitational acceleration. The boundary condition y = -20 m dictates the landing moment, wholly independent of the stone\'s horizontal velocity.\n\nAuthoritative Grounding Note: As established in standard textbook mechanics (Galileo\'s Principle of Invariance), calculations must treat the decoupled orthogonal coordinate equations as primary ground truth.',
+        questionRestatement: 'Query: Explain the core concepts of quantum computing simply.',
+        solution: 'Quantum computing leverages quantum mechanical principles to process information in ways traditional computers cannot.\n\n1. Qubits vs Bits: Classical bits are either 0 or 1. Qubits can exist in a superposition of both states simultaneously.\n2. Entanglement: Qubits can be interconnected so that the state of one instantly influences another.\n3. Applications: Unlocking rapid optimization, complex molecule simulation, and cryptography.',
+        explanation: 'In classical computing, state calculation happens linearly. Quantum superposition allows simultaneous evaluation of vast computational paths.',
         sources: [],
+        groundingInfo: {
+          googleSearchUsed: true,
+          googleMapsUsed: false,
+          searchQueries: ['Quantum computing basics explanation'],
+          sources: [
+            { title: 'Google Search Information Index', url: 'https://www.google.com' },
+          ],
+          summaryText: 'Verified information via Google Search Grounding.',
+        },
       },
       sources: [],
     },
@@ -40,22 +51,31 @@ const DEFAULT_SESSION: WorkspaceSession = {
 };
 
 const SECONDARY_SESSION: WorkspaceSession = {
-  id: 'session-carnot-2',
-  title: 'Carnot Engine Efficiency',
-  subject: 'Physics 2nd Paper',
+  id: 'session-performance-2',
+  title: 'Web Performance Optimization',
+  subject: 'Software Engineering',
   createdAt: Date.now() - 1000 * 60 * 120,
   updatedAt: Date.now() - 1000 * 60 * 120,
   turns: [
     {
-      id: 'turn-carnot-1',
-      userQuery: 'A Carnot engine operates between heat reservoirs at 500 K and 300 K. It absorbs 1200 J of heat per cycle. Calculate its efficiency and work done per cycle.',
+      id: 'turn-perf-1',
+      userQuery: 'What are key strategies for optimizing web application performance?',
       timestamp: Date.now() - 1000 * 60 * 120,
       status: 'complete',
       response: {
-        questionRestatement: 'Reversible Carnot heat engine operating between two thermal reservoirs:\n• Hot reservoir temperature: T_H = 500 K\n• Cold reservoir temperature: T_C = 300 K\n• Heat absorbed per cycle: Q_H = 1200 J\n• Target unknowns: Thermal efficiency (η) and net work output per cycle (W_net).',
-        solution: '1. Theoretical Carnot efficiency:\n   η = 1 - (T_C / T_H)\n   η = 1 - (300 / 500) = 1 - 0.60 = 0.40 (or 40%)\n\n2. Net work performed per cycle:\n   W_net = η · Q_H = 0.40 × 1200 J = 480 J\n\n3. Energy conservation check (Heat rejected to sink):\n   Q_C = Q_H - W_net = 1200 - 480 = 720 J.',
-        explanation: 'The Carnot cycle defines the upper thermodynamic limit for any heat engine operating between two given temperatures. By the Second Law of Thermodynamics and Clausius theorem, no engine can be more efficient than a reversible Carnot engine without producing a net decrease in entropy.\n\nAuthoritative Grounding Note: Clausius theorem and the Second Law of Thermodynamics establish this limit strictly for all reversible Carnot cycles.',
+        questionRestatement: 'Query: Key strategies for web application performance optimization.',
+        solution: '1. Asset Compression & Lazy Loading: Defer offscreen assets and compress images.\n2. Code Splitting & Caching: Leverage browser cache and bundle dynamic imports.\n3. Efficient DOM & Server Rendering: Minimize layout shifts and optimize API payloads.',
+        explanation: 'Reducing initial payload size and critical rendering path blockages maximizes First Contentful Paint (FCP) and Time to Interactive (TTI).',
         sources: [],
+        groundingInfo: {
+          googleSearchUsed: true,
+          googleMapsUsed: false,
+          searchQueries: ['Web application performance optimization strategies'],
+          sources: [
+            { title: 'Google Search Index', url: 'https://www.google.com' },
+          ],
+          summaryText: 'Verified web performance strategies via Google Search Grounding.',
+        },
       },
       sources: [],
     },
@@ -132,7 +152,7 @@ export default function App() {
     }
     return {
       provider: 'Gemini',
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.1-flash-lite',
       customApiKey: '',
       hasServerKey: true,
     };
@@ -156,8 +176,8 @@ export default function App() {
   });
 
   const [availableModels] = useState([
+    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Fast & Reliable)' },
     { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' },
-    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -270,22 +290,50 @@ export default function App() {
     }
   }, [currentUser]);
 
-  // Check server configuration
+  // Firebase Auth State Listener & User Firestore Settings Sync
   useEffect(() => {
-    fetch('/api/config')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const storedData = await getUserData(firebaseUser.uid);
+          const savedApiKey = storedData?.apiKey || '';
+          const savedProvider = storedData?.provider || 'Gemini';
+          const savedModel = storedData?.model || 'gemini-3.6-flash';
+
           setConfig((prev) => ({
             ...prev,
-            hasServerKey: !!data.hasServerKey,
-            model: prev.model || data.model || 'gemini-3.8-flash',
+            provider: savedProvider,
+            model: savedModel,
+            customApiKey: savedApiKey,
           }));
+
+          const userAccount: UserAccount = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: storedData?.displayName || firebaseUser.displayName || 'User',
+            avatarUrl: firebaseUser.photoURL || undefined,
+            isAuthenticated: true,
+            apiKeySettings: savedApiKey ? {
+              provider: savedProvider,
+              apiKey: savedApiKey,
+              model: savedModel,
+            } : undefined,
+          };
+
+          setCurrentUser(userAccount);
+        } catch (err) {
+          console.error('Error fetching user Firestore data:', err);
         }
-      })
-      .catch(() => {
-        // server-side default intact
-      });
+      } else {
+        setCurrentUser(null);
+        setConfig((prev) => ({
+          ...prev,
+          customApiKey: '',
+        }));
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
@@ -353,6 +401,7 @@ export default function App() {
       userQuery: queryText,
       timestamp: Date.now(),
       status: 'generating',
+      processingStage: 'searching',
       sources: [],
     };
 
@@ -378,6 +427,24 @@ export default function App() {
 
     setIsLoading(true);
 
+    const updateStage = (stage: 'searching' | 'thinking' | 'preparing') => {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === activeSession.id) {
+            return {
+              ...s,
+              turns: s.turns.map((t) => (t.id === newTurnId ? { ...t, processingStage: stage } : t)),
+            };
+          }
+          return s;
+        })
+      );
+    };
+
+    // Fallback timers to ensure smooth state progression if network response is buffered
+    const tThinking = setTimeout(() => updateStage('thinking'), 400);
+    const tPreparing = setTimeout(() => updateStage('preparing'), 1600);
+
     try {
       const historyPayload = activeSession.turns
         .filter((t) => t.response)
@@ -388,20 +455,75 @@ export default function App() {
 
       const res = await fetch('/api/study/solve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
         body: JSON.stringify({
           question: queryText,
           model: config.model,
           customApiKey: config.customApiKey || undefined,
           history: historyPayload,
+          stream: true,
         }),
       });
 
       if (!res.ok) {
+        clearTimeout(tThinking);
+        clearTimeout(tPreparing);
         throw new Error(`Server returned status ${res.status}`);
       }
 
-      const data = await res.json();
+      let data: any = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(trimmed.slice(6));
+                if (event.type === 'status' && event.stage) {
+                  clearTimeout(tThinking);
+                  clearTimeout(tPreparing);
+                  updateStage(event.stage);
+                } else if (event.type === 'complete') {
+                  clearTimeout(tThinking);
+                  clearTimeout(tPreparing);
+                  data = event.data;
+                } else if (event.type === 'error') {
+                  clearTimeout(tThinking);
+                  clearTimeout(tPreparing);
+                  throw new Error(event.error || 'Server error');
+                }
+              } catch (e: any) {
+                if (e.message && !e.message.includes('JSON')) {
+                  throw e;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        data = await res.json();
+      }
+
+      clearTimeout(tThinking);
+      clearTimeout(tPreparing);
+
+      if (!data) {
+        throw new Error('No valid response received');
+      }
 
       setSessions((prev) =>
         prev.map((s) => {
@@ -416,6 +538,7 @@ export default function App() {
                     solution: data.solution,
                     explanation: data.explanation,
                     sources: data.sources || t.sources,
+                    groundingInfo: data.groundingInfo,
                   },
                   sources: data.sources || t.sources,
                 };
@@ -432,6 +555,8 @@ export default function App() {
         })
       );
     } catch (err: unknown) {
+      clearTimeout(tThinking);
+      clearTimeout(tPreparing);
       console.error('Error solving question:', err);
       setSessions((prev) =>
         prev.map((s) => {
@@ -461,21 +586,118 @@ export default function App() {
     const targetTurn = activeSession.turns.find((t) => t.id === turnId);
     if (!targetTurn) return;
 
+    // Reset target turn to generating status and clear old response
+    setSessions((prev) =>
+      prev.map((s) => {
+        if (s.id === activeSession.id) {
+          return {
+            ...s,
+            turns: s.turns.map((t) =>
+              t.id === turnId
+                ? {
+                    ...t,
+                    status: 'generating' as const,
+                    processingStage: 'searching' as const,
+                    response: undefined,
+                  }
+                : t
+            ),
+          };
+        }
+        return s;
+      })
+    );
+
     setIsLoading(true);
+
+    const updateStage = (stage: 'searching' | 'thinking' | 'preparing') => {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === activeSession.id) {
+            return {
+              ...s,
+              turns: s.turns.map((t) => (t.id === turnId ? { ...t, processingStage: stage } : t)),
+            };
+          }
+          return s;
+        })
+      );
+    };
+
+    const tThinking = setTimeout(() => updateStage('thinking'), 400);
+    const tPreparing = setTimeout(() => updateStage('preparing'), 1600);
 
     try {
       const res = await fetch('/api/study/solve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
         body: JSON.stringify({
           question: targetTurn.userQuery,
           model: config.model,
           customApiKey: config.customApiKey || undefined,
+          stream: true,
         }),
       });
 
-      if (!res.ok) throw new Error('Regeneration request failed');
-      const data = await res.json();
+      if (!res.ok) {
+        clearTimeout(tThinking);
+        clearTimeout(tPreparing);
+        throw new Error('Regeneration request failed');
+      }
+
+      let data: any = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(trimmed.slice(6));
+                if (event.type === 'status' && event.stage) {
+                  clearTimeout(tThinking);
+                  clearTimeout(tPreparing);
+                  updateStage(event.stage);
+                } else if (event.type === 'complete') {
+                  clearTimeout(tThinking);
+                  clearTimeout(tPreparing);
+                  data = event.data;
+                } else if (event.type === 'error') {
+                  clearTimeout(tThinking);
+                  clearTimeout(tPreparing);
+                  throw new Error(event.error || 'Server error');
+                }
+              } catch (e: any) {
+                if (e.message && !e.message.includes('JSON')) {
+                  throw e;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        data = await res.json();
+      }
+
+      clearTimeout(tThinking);
+      clearTimeout(tPreparing);
+
+      if (!data) {
+        throw new Error('No valid response received');
+      }
 
       setSessions((prev) =>
         prev.map((s) => {
@@ -490,6 +712,7 @@ export default function App() {
                     solution: data.solution,
                     explanation: data.explanation,
                     sources: data.sources || t.sources,
+                    groundingInfo: data.groundingInfo,
                   },
                   sources: data.sources || t.sources,
                 };
@@ -502,30 +725,78 @@ export default function App() {
         })
       );
     } catch (err) {
+      clearTimeout(tThinking);
+      clearTimeout(tPreparing);
       console.error('Error during regeneration:', err);
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === activeSession.id) {
+            return {
+              ...s,
+              turns: s.turns.map((t) =>
+                t.id === turnId ? { ...t, status: 'error' as const } : t
+              ),
+            };
+          }
+          return s;
+        })
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAuthenticate = (user: UserAccount) => {
+  const handleAuthenticate = async (user: UserAccount) => {
     const userWithAvatar: UserAccount = {
       ...user,
       avatarUrl: user.avatarUrl || getRandomAvatar(),
     };
     setCurrentUser(userWithAvatar);
-    try {
-      localStorage.setItem('study_workspace_user', JSON.stringify(userWithAvatar));
-    } catch {
-      // ignore
+    if (user.uid) {
+      try {
+        await saveUserData(user.uid, {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.name || 'User',
+          ...(user.apiKeySettings ? {
+            provider: user.apiKeySettings.provider,
+            apiKey: user.apiKeySettings.apiKey,
+            model: user.apiKeySettings.model,
+          } : {}),
+        });
+      } catch (err) {
+        console.error('Error saving user data on auth:', err);
+      }
     }
     setCurrentView('workspace');
   };
 
-  const handleSignOut = () => {
+  const handleSaveConfig = async (updatedConfig: AppConfig) => {
+    setConfig(updatedConfig);
+    if (currentUser?.uid) {
+      try {
+        await saveUserData(currentUser.uid, {
+          provider: updatedConfig.provider,
+          model: updatedConfig.model,
+          apiKey: updatedConfig.customApiKey,
+        });
+      } catch (err) {
+        console.error('Error saving API key config to Firestore:', err);
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('Error signing out:', err);
+    }
     setCurrentUser(null);
+    setConfig((prev) => ({ ...prev, customApiKey: '' }));
     try {
       localStorage.removeItem('study_workspace_user');
+      localStorage.removeItem('study_workspace_config');
     } catch {
       // ignore
     }
@@ -617,7 +888,7 @@ export default function App() {
     return (
       <ProviderSetupPage
         config={config}
-        onSaveConfig={(updated) => setConfig(updated)}
+        onSaveConfig={handleSaveConfig}
         onNext={() => setCurrentView('auth')}
         colorMode={colorMode}
         onSelectMode={setColorMode}
@@ -656,7 +927,10 @@ export default function App() {
         questionsUsedToday={questionsUsedToday}
         onNavigateToQuestion={handleNavigateToQuestion}
         config={config}
-        onUpdateConfig={(partial) => setConfig((prev) => ({ ...prev, ...partial }))}
+        onUpdateConfig={(partial) => {
+          const updated = { ...config, ...partial };
+          handleSaveConfig(updated);
+        }}
         availableModels={availableModels}
         onOpenProviderSetup={() => setCurrentView('provider-setup')}
         savedQuestions={savedQuestions}

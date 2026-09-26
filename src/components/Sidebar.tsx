@@ -285,12 +285,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ) : currentUser?.name ? (
                 currentUser.name.charAt(0)
               ) : (
-                'S'
+                'U'
               )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-medium text-[var(--theme-text-primary)] group-hover:text-[var(--theme-primary-green)] truncate leading-tight transition-colors">
-                {currentUser?.name || 'Student Researcher'}
+                {currentUser?.name || 'User'}
               </div>
             </div>
           </button>

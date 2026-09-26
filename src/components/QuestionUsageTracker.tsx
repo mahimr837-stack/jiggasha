@@ -60,7 +60,7 @@ export const QuestionUsageTracker: React.FC<QuestionUsageTrackerProps> = ({
         ) : (
           <div className="flex items-center justify-between gap-2 mb-1.5 text-[11px] text-[var(--theme-text-secondary)]">
             <span className="font-mono">
-              <span className="font-medium text-[var(--theme-text-primary)]">{clampedCount}</span> / {maxQuestions} questions used {dateStr ? 'on this date' : 'today'}
+              <span className="font-medium text-[var(--theme-text-primary)]">{clampedCount}</span> / {maxQuestions} prompts used {dateStr ? 'on this date' : 'today'}
             </span>
             {isCompact && (
               <span className="text-[10px] text-[var(--theme-text-secondary)] font-mono">
@@ -75,18 +75,18 @@ export const QuestionUsageTracker: React.FC<QuestionUsageTrackerProps> = ({
       <div
         className="grid grid-cols-10 gap-[2.5px] sm:gap-[3px] p-0.5"
         role="group"
-        aria-label={`Question usage: ${clampedCount} of ${maxQuestions} questions used`}
+        aria-label={`Prompt usage: ${clampedCount} of ${maxQuestions} prompts used`}
       >
         {boxes.map((index) => {
           const questionNumber = index + 1;
           const isFilled = index < clampedCount;
           const isNext = index === clampedCount && !isLimitReached;
 
-          let titleText = `Question ${questionNumber} of ${maxQuestions}`;
+          let titleText = `Prompt ${questionNumber} of ${maxQuestions}`;
           if (isFilled) {
             titleText = onSelectQuestionBox
-              ? `Question ${questionNumber} (Click to open question in workspace)`
-              : `Question ${questionNumber} of ${maxQuestions} (Used)`;
+              ? `Prompt ${questionNumber} (Click to open prompt in workspace)`
+              : `Prompt ${questionNumber} of ${maxQuestions} (Used)`;
           } else if (isNext) {
             titleText += ' (Next available)';
           } else {

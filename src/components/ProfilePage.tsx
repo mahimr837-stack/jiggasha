@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserAccount, ColorMode, AppConfig, SavedQuestion } from '../types';
 import { ThemeSelector } from './ThemeSelector';
 import { PRESET_AVATARS, isPresetAvatar } from '../data/avatars';
@@ -24,6 +24,8 @@ import {
   Bookmark,
   Copy,
   ChevronRight,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface ProfilePageProps {
@@ -57,6 +59,33 @@ const HSC_BOARDS = [
   'Technical',
 ];
 
+const PROVIDER_OPTIONS: Record<string, { id: string; name: string }[]> = {
+  Gemini: [
+    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Fast & Reliable)' },
+    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' },
+  ],
+  OpenAI: [
+    { id: 'gpt-4o', name: 'GPT-4o' },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+  ],
+  Anthropic: [
+    { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet' },
+    { id: 'claude-3-5-haiku', name: 'Claude 3.5 Haiku' },
+  ],
+  DeepSeek: [
+    { id: 'deepseek-chat', name: 'DeepSeek V3' },
+    { id: 'deepseek-reasoner', name: 'DeepSeek R1' },
+  ],
+  Ollama: [
+    { id: 'llama3.2', name: 'Llama 3.2 (Local)' },
+    { id: 'mistral', name: 'Mistral 7B (Local)' },
+  ],
+  Groq: [
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
+    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+  ],
+};
+
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   currentUser,
   onUpdateUser,
@@ -65,12 +94,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onSelectMode,
   questionsUsedToday = 8,
   onNavigateToQuestion,
-  config = { provider: 'Gemini', model: 'gemini-3.8-flash', customApiKey: '', hasServerKey: true },
+  config = { provider: 'Gemini', model: 'gemini-3.1-flash-lite', customApiKey: '', hasServerKey: true },
   onUpdateConfig,
   availableModels = [
+    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Fast & Reliable)' },
     { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' },
-    { id: 'gemini-3.7-pro', name: 'Gemini 3.7 Pro' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
   ],
   onOpenProviderSetup,
   savedQuestions = [],
@@ -79,9 +107,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 }) => {
   // Fallback defaults if currentUser was not yet initialized
   const email = currentUser?.email || 'mahimr837@gmail.com';
-  const currentName = currentUser?.name || 'Student Researcher';
+  const currentName = currentUser?.name || 'User';
   const currentAvatar = currentUser?.avatarUrl || '';
-  const currentCollege = currentUser?.collegeName || 'Notre Dame College, Dhaka';
+  const currentCollege = currentUser?.collegeName || 'Acme Corp';
   const currentBoard = currentUser?.hscBoard || 'Dhaka';
 
   // Saved Questions Modal State
@@ -97,19 +125,40 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // AI Config State
   const [isEditingKey, setIsEditingKey] = useState(false);
-  const [keyInput, setKeyInput] = useState(config.customApiKey);
+  const [showKey, setShowKey] = useState(false);
+  const [providerInput, setProviderInput] = useState(config.provider || 'Gemini');
+  const [modelInput, setModelInput] = useState(config.model || 'gemini-3.1-flash-lite');
+  const [keyInput, setKeyInput] = useState(config.customApiKey || '');
   const [keySavedSuccess, setKeySavedSuccess] = useState(false);
 
-  const handleSaveKey = () => {
+  useEffect(() => {
+    setKeyInput(config.customApiKey || '');
+    setProviderInput(config.provider || 'Gemini');
+    setModelInput(config.model || 'gemini-3.1-flash-lite');
+  }, [config.customApiKey, config.provider, config.model]);
+
+  const handleProviderSelect = (newProvider: string) => {
+    setProviderInput(newProvider);
+    const available = PROVIDER_OPTIONS[newProvider];
+    if (available && available.length > 0) {
+      setModelInput(available[0].id);
+    }
+  };
+
+  const handleSaveAiSettings = () => {
     if (onUpdateConfig) {
-      onUpdateConfig({ customApiKey: keyInput.trim() });
+      onUpdateConfig({
+        provider: providerInput,
+        model: modelInput,
+        customApiKey: keyInput.trim(),
+      });
     }
     setIsEditingKey(false);
     setKeySavedSuccess(true);
     setTimeout(() => setKeySavedSuccess(false), 2500);
   };
 
-  const handleResetKey = () => {
+  const handleResetAiSettings = () => {
     setKeyInput('');
     if (onUpdateConfig) {
       onUpdateConfig({ customApiKey: '' });
@@ -597,11 +646,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             )}
           </div>
 
-          {/* SECTION 4: COLLEGE NAME */}
+          {/* SECTION 4: ORGANIZATION */}
           <div className="border border-[var(--theme-border)] rounded-xl p-4 sm:p-5 bg-[var(--theme-bg-surface)] shadow-xs transition-colors duration-200">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]">
-                College Name
+                Organization
               </span>
               {collegeSavedSuccess && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--theme-primary-green)] bg-[var(--theme-green-tint)] px-2 py-0.5 rounded-full">
@@ -618,7 +667,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     type="text"
                     value={collegeInput}
                     onChange={(e) => setCollegeInput(e.target.value)}
-                    placeholder="e.g. Notre Dame College, Dhaka"
+                    placeholder="Organization or company name"
                     autoFocus
                     className="w-full h-10 px-3 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] focus:border-[var(--theme-primary-green)] focus:ring-1 focus:ring-[var(--theme-primary-green)] rounded-lg text-sm text-[var(--theme-text-primary)] focus:outline-none transition-colors"
                   />
@@ -667,86 +716,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             )}
           </div>
 
-          {/* SECTION 5: HSC BOARD */}
+          {/* SECTION 5: API KEY & MODEL */}
           <div className="border border-[var(--theme-border)] rounded-xl p-4 sm:p-5 bg-[var(--theme-bg-surface)] shadow-xs transition-colors duration-200">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]">
-                HSC Board
+                Provider, API Key & Model
               </span>
-              {boardSavedSuccess && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--theme-primary-green)] bg-[var(--theme-green-tint)] px-2 py-0.5 rounded-full">
-                  <Check className="w-3 h-3" />
-                  Saved
-                </span>
-              )}
-            </div>
-
-            {isEditingBoard ? (
-              <div className="space-y-2 mt-2">
-                <select
-                  value={boardSelect}
-                  onChange={(e) => setBoardSelect(e.target.value)}
-                  className="w-full h-10 px-3 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/50 focus:border-[var(--theme-primary-green)] focus:ring-1 focus:ring-[var(--theme-primary-green)] rounded-lg text-sm text-[var(--theme-text-primary)] focus:outline-none transition-colors cursor-pointer"
-                >
-                  {HSC_BOARDS.map((board) => (
-                    <option key={board} value={board}>
-                      {board} Board
-                    </option>
-                  ))}
-                </select>
-
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBoardSelect(currentBoard);
-                      setIsEditingBoard(false);
-                    }}
-                    className="h-8 px-3 rounded-lg border border-[var(--theme-border)] text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] hover:bg-[var(--theme-bg-subtle)] transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveBoard}
-                    className="h-8 px-3.5 bg-[var(--theme-primary-green)] hover:bg-[var(--theme-primary-green-hover)] text-white rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3 pt-0.5">
-                <div className="flex items-center gap-2.5">
-                  <GraduationCap className="w-4 h-4 text-[var(--theme-text-secondary)] flex-shrink-0" />
-                  <span className="text-sm font-medium text-[var(--theme-text-primary)]">
-                    {currentBoard} Board
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBoardSelect(currentBoard);
-                    setIsEditingBoard(true);
-                  }}
-                  className="flex items-center gap-1 text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary-green)] py-1 px-2.5 rounded-lg border border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/40 bg-[var(--theme-bg-subtle)] transition-colors cursor-pointer"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  <span>Edit</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* SECTION: AI ENGINE & MODEL CONFIGURATION */}
-          <div className="border border-[var(--theme-border)] rounded-xl p-4 sm:p-5 bg-[var(--theme-bg-surface)] shadow-xs transition-colors duration-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--theme-border)]">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-[var(--theme-primary-green)]" />
-                <h3 className="text-sm font-semibold text-[var(--theme-text-primary)]">
-                  AI Engine & Model
-                </h3>
-              </div>
               {keySavedSuccess && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--theme-primary-green)] bg-[var(--theme-green-tint)] px-2 py-0.5 rounded-full">
                   <Check className="w-3 h-3" />
@@ -755,138 +730,180 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               )}
             </div>
 
-            {/* 1. Provider */}
-            <div className="flex items-center justify-between gap-3 pt-0.5">
-              <div>
-                <span className="block text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]">
-                  Provider
-                </span>
-                <span className="text-sm font-medium text-[var(--theme-text-primary)]">
-                  {config.provider}
-                </span>
-              </div>
-              {onOpenProviderSetup && (
-                <button
-                  type="button"
-                  onClick={onOpenProviderSetup}
-                  className="flex items-center gap-1 text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary-green)] py-1 px-2.5 rounded-lg border border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/40 bg-[var(--theme-bg-subtle)] transition-colors cursor-pointer"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  <span>Change</span>
-                </button>
-              )}
-            </div>
+            {isEditingKey ? (
+              <div className="space-y-3 mt-3">
+                {/* 1. Provider Select */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="profile-provider-select"
+                    className="block text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]"
+                  >
+                    AI Provider
+                  </label>
+                  <select
+                    id="profile-provider-select"
+                    value={providerInput}
+                    onChange={(e) => handleProviderSelect(e.target.value)}
+                    className="w-full h-9 px-2.5 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] focus:border-[var(--theme-primary-green)] rounded-lg text-xs text-[var(--theme-text-primary)] focus:outline-none transition-colors cursor-pointer"
+                  >
+                    {Object.keys(PROVIDER_OPTIONS).map((prov) => (
+                      <option key={prov} value={prov}>
+                        {prov}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* 2. Model Selection */}
-            <div className="space-y-1.5 pt-2 border-t border-[var(--theme-border)]">
-              <span className="block text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]">
-                Active Model
-              </span>
-              <div className="relative">
-                <select
-                  value={config.model}
-                  onChange={(e) => onUpdateConfig && onUpdateConfig({ model: e.target.value })}
-                  aria-label="Select active model"
-                  className="w-full h-10 pl-3 pr-8 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/50 focus:border-[var(--theme-primary-green)] focus:ring-1 focus:ring-[var(--theme-primary-green)] rounded-lg text-sm text-[var(--theme-text-primary)] focus:outline-none transition-colors cursor-pointer appearance-none"
-                >
-                  {availableModels.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-[var(--theme-text-secondary)] absolute right-2.5 top-3 pointer-events-none" />
-              </div>
-            </div>
+                {/* 2. Model Select */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="profile-model-select"
+                    className="block text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]"
+                  >
+                    Model
+                  </label>
+                  <select
+                    id="profile-model-select"
+                    value={modelInput}
+                    onChange={(e) => setModelInput(e.target.value)}
+                    className="w-full h-9 px-2.5 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] focus:border-[var(--theme-primary-green)] rounded-lg text-xs text-[var(--theme-text-primary)] focus:outline-none transition-colors cursor-pointer"
+                  >
+                    {(PROVIDER_OPTIONS[providerInput] || [{ id: modelInput, name: modelInput }]).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* 3. API Key */}
-            <div className="space-y-1.5 pt-2 border-t border-[var(--theme-border)]">
-              <div className="flex items-center justify-between">
-                <span className="block text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]">
-                  API Key
-                </span>
-                {!isEditingKey && (
+                {/* 3. API Key Input */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="profile-api-key"
+                    className="block text-[11px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]"
+                  >
+                    {providerInput === 'Ollama' ? 'API Key / Token (Optional)' : `${providerInput} API Key`}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="profile-api-key"
+                      type={showKey ? 'text' : 'password'}
+                      value={keyInput}
+                      onChange={(e) => setKeyInput(e.target.value)}
+                      placeholder={
+                        providerInput === 'Gemini'
+                          ? 'Paste Gemini API key (e.g. AIzaSy...)'
+                          : providerInput === 'OpenAI'
+                          ? 'Paste OpenAI API key (e.g. sk-...)'
+                          : providerInput === 'Anthropic'
+                          ? 'Paste Anthropic API key (e.g. sk-ant-...)'
+                          : providerInput === 'DeepSeek'
+                          ? 'Paste DeepSeek API key'
+                          : providerInput === 'Groq'
+                          ? 'Paste Groq API key (gsk_...)'
+                          : 'API key / authentication token'
+                      }
+                      autoFocus
+                      className="w-full h-9 pl-3 pr-10 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] focus:border-[var(--theme-primary-green)] focus:ring-1 focus:ring-[var(--theme-primary-green)] rounded-lg text-xs font-mono text-[var(--theme-text-primary)] focus:outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-2.5 top-2.5 text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] cursor-pointer"
+                      aria-label={showKey ? 'Hide key' : 'Show key'}
+                    >
+                      {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  {config.customApiKey ? (
+                    <button
+                      type="button"
+                      onClick={handleResetAiSettings}
+                      className="h-8 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Remove key</span>
+                    </button>
+                  ) : <div />}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKeyInput(config.customApiKey || '');
+                        setProviderInput(config.provider || 'Gemini');
+                        setModelInput(config.model || 'gemini-3.1-flash-lite');
+                        setIsEditingKey(false);
+                      }}
+                      className="h-8 px-3 rounded-lg border border-[var(--theme-border)] text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] hover:bg-[var(--theme-bg-subtle)] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveAiSettings}
+                      className="h-8 px-3.5 bg-[var(--theme-primary-green)] hover:bg-[var(--theme-primary-green-hover)] text-white rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 pt-0.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Key className="w-4 h-4 text-[var(--theme-text-secondary)] flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-[var(--theme-text-primary)] truncate">
+                      {config.provider || 'Gemini'} •{' '}
+                      {(PROVIDER_OPTIONS[config.provider || 'Gemini'] || []).find((m) => m.id === config.model)?.name ||
+                        config.model ||
+                        'gemini-3.1-flash-lite'}
+                    </div>
+                    <div className="text-[11px] font-mono text-[var(--theme-text-secondary)] truncate">
+                      {config.customApiKey
+                        ? `••••••••${config.customApiKey.slice(-4)}`
+                        : config.hasServerKey && (config.provider === 'Gemini' || !config.provider)
+                        ? 'Default Server Key'
+                        : 'No custom key configured'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => {
-                      setKeyInput(config.customApiKey);
+                      setKeyInput(config.customApiKey || '');
+                      setProviderInput(config.provider || 'Gemini');
+                      setModelInput(config.model || 'gemini-3.1-flash-lite');
                       setIsEditingKey(true);
                     }}
                     className="flex items-center gap-1 text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary-green)] py-1 px-2.5 rounded-lg border border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/40 bg-[var(--theme-bg-subtle)] transition-colors cursor-pointer"
                   >
-                    <Key className="w-3 h-3" />
-                    <span>{config.customApiKey ? 'Change Key' : 'Add Custom Key'}</span>
+                    <Edit2 className="w-3 h-3" />
+                    <span>Change</span>
                   </button>
-                )}
+                </div>
               </div>
-
-              {isEditingKey ? (
-                <div className="space-y-2 mt-1">
-                  <input
-                    type="password"
-                    value={keyInput}
-                    onChange={(e) => setKeyInput(e.target.value)}
-                    placeholder="AIzaSy... (leave blank to use default)"
-                    autoFocus
-                    className="w-full h-10 px-3 bg-[var(--theme-bg-input)] border border-[var(--theme-border)] focus:border-[var(--theme-primary-green)] focus:ring-1 focus:ring-[var(--theme-primary-green)] rounded-lg font-mono text-xs text-[var(--theme-text-primary)] focus:outline-none transition-colors"
-                  />
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    {config.customApiKey ? (
-                      <button
-                        type="button"
-                        onClick={handleResetKey}
-                        className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Reset to default</span>
-                      </button>
-                    ) : <span />}
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setKeyInput(config.customApiKey);
-                          setIsEditingKey(false);
-                        }}
-                        className="h-8 px-3 rounded-lg border border-[var(--theme-border)] text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] hover:bg-[var(--theme-bg-subtle)] transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveKey}
-                        className="h-8 px-3.5 bg-[var(--theme-primary-green)] hover:bg-[var(--theme-primary-green-hover)] text-white rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer"
-                      >
-                        Save Key
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs font-mono text-[var(--theme-text-secondary)] bg-[var(--theme-bg-subtle)] px-3 py-2 rounded-lg border border-[var(--theme-border)] truncate">
-                  {config.customApiKey
-                    ? `Custom Key: ••••••••${config.customApiKey.slice(-4)}`
-                    : (config.hasServerKey ? 'Default Server-Configured Gemini Key (Active)' : 'No API key configured')}
-                </div>
-              )}
-            </div>
+            )}
           </div>
-
-          {/* SECTION 6: QUESTION USAGE TRACKER WITH DATE PICKER & TABS */}
           <ProfileUsageTracker
             questionsUsedToday={questionsUsedToday}
             maxQuestions={50}
             onNavigateToQuestion={onNavigateToQuestion}
           />
 
-          {/* SECTION 7: SAVED QUESTIONS */}
+          {/* SECTION 7: SAVED MESSAGES */}
           <div className="border border-[var(--theme-border)] rounded-xl p-4 sm:p-5 bg-[var(--theme-bg-surface)] shadow-xs transition-colors duration-200">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Bookmark className="w-4 h-4 text-[var(--theme-primary-green)] flex-shrink-0" />
                 <span className="text-sm font-medium text-[var(--theme-text-primary)]">
-                  Saved Questions
+                  Saved Messages
                 </span>
                 {savedQuestions.length > 0 && (
                   <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[var(--theme-green-tint)] text-[var(--theme-primary-green)] font-medium">
@@ -900,7 +917,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 onClick={() => setIsSavedModalOpen(true)}
                 className="h-8 px-3.5 bg-[var(--theme-primary-green)] hover:bg-[var(--theme-primary-green-hover)] text-white rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
               >
-                <span>Saved Questions</span>
+                <span>Saved Messages</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -928,7 +945,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       </main>
 
-      {/* SAVED QUESTIONS MODAL */}
+      {/* SAVED MESSAGES MODAL */}
       {isSavedModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-2xl max-h-[85vh] flex flex-col bg-[var(--theme-bg-surface)] border border-[var(--theme-border)] rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-150">
@@ -937,7 +954,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               <div className="flex items-center gap-2">
                 <Bookmark className="w-4 h-4 text-[var(--theme-primary-green)]" />
                 <h3 className="text-sm font-semibold text-[var(--theme-text-primary)]">
-                  Saved Questions
+                  Saved Messages
                 </h3>
                 <span className="text-xs text-[var(--theme-text-secondary)] font-mono">
                   ({savedQuestions.length})
@@ -1034,7 +1051,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               <div className="flex items-center gap-2">
                 <LifeBuoy className="w-4 h-4 text-[var(--theme-primary-green)]" />
                 <h3 className="text-sm font-semibold text-[var(--theme-text-primary)]">
-                  Contact Academic Support
+                  Contact Support
                 </h3>
               </div>
               <button
@@ -1055,7 +1072,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   Message Sent
                 </div>
                 <div className="text-xs text-[var(--theme-text-secondary)] max-w-xs mx-auto">
-                  Our academic support team has received your inquiry and will reply to <span className="font-mono">{email}</span> shortly.
+                  Our support team has received your message and will reply to <span className="font-mono">{email}</span> shortly.
                 </div>
               </div>
             ) : (
@@ -1144,18 +1161,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             aria-labelledby="avatar-modal-title"
           >
             {/* Modal Header */}
-            <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-[var(--theme-border)]">
-              <div>
-                <h3
-                  id="avatar-modal-title"
-                  className="text-base font-semibold text-[var(--theme-text-primary)]"
-                >
-                  Choose an Avatar
-                </h3>
-                <p className="text-xs text-[var(--theme-text-secondary)] mt-0.5">
-                  Select one of the 12 character avatars for your profile picture
-                </p>
-              </div>
+            <div className="flex items-center justify-end gap-3 mb-2 pb-2 border-b border-[var(--theme-border)]">
               <button
                 type="button"
                 onClick={() => setIsAvatarModalOpen(false)}
@@ -1166,7 +1172,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </button>
             </div>
 
-            {/* 12 Avatars Grid (6 columns x 2 rows on sm+, responsive on mobile) */}
+            {/* 12 Avatars Grid */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4 py-2">
               {PRESET_AVATARS.map((avatar) => {
                 const isSelected = currentAvatar === avatar.src;
@@ -1175,7 +1181,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     key={avatar.id}
                     type="button"
                     onClick={() => handleSelectPresetAvatar(avatar.src)}
-                    className={`group relative flex flex-col items-center justify-center p-1 rounded-xl transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary-green)] ${
+                    className={`group relative flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary-green)] ${
                       isSelected
                         ? 'bg-[var(--theme-green-tint)]/60'
                         : 'hover:bg-[var(--theme-bg-subtle)]'
@@ -1203,19 +1209,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                         </div>
                       )}
                     </div>
-                    <span className="text-[10px] text-[var(--theme-text-secondary)] group-hover:text-[var(--theme-text-primary)] mt-1.5 font-medium truncate max-w-full text-center">
-                      {avatar.gender === 'male' ? 'Male' : 'Female'} P{avatar.pair}
-                    </span>
                   </button>
                 );
               })}
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-4 mt-3 border-t border-[var(--theme-border)]">
-              <span className="text-[11px] text-[var(--theme-text-secondary)]">
-                Selecting an avatar updates your profile immediately
-              </span>
+            <div className="flex items-center justify-end pt-3 mt-2 border-t border-[var(--theme-border)]">
               <button
                 type="button"
                 onClick={() => setIsAvatarModalOpen(false)}

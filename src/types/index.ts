@@ -13,18 +13,36 @@ export interface SourceItem {
   relevanceScore?: number;
 }
 
+export interface GroundingSource {
+  title: string;
+  url?: string;
+  snippet?: string;
+}
+
+export interface GroundingFeatureInfo {
+  googleSearchUsed: boolean;
+  googleMapsUsed: boolean;
+  searchQueries?: string[];
+  sources?: GroundingSource[];
+  summaryText?: string;
+}
+
 export interface StructuredResponse {
   questionRestatement: string;
   solution: string;
   explanation: string;
   sources: SourceItem[];
+  groundingInfo?: GroundingFeatureInfo;
 }
+
+export type ProcessingStage = 'searching' | 'thinking' | 'preparing';
 
 export interface WorkspaceTurn {
   id: string;
   userQuery: string;
   timestamp: number;
   status: 'idle' | 'retrieving' | 'generating' | 'complete' | 'error';
+  processingStage?: ProcessingStage;
   response?: StructuredResponse;
   sources: SourceItem[];
   error?: string;
@@ -47,12 +65,18 @@ export interface AppConfig {
 }
 
 export interface UserAccount {
+  uid?: string;
   email: string;
   name?: string;
   isAuthenticated: boolean;
   avatarUrl?: string;
   collegeName?: string;
   hscBoard?: string;
+  apiKeySettings?: {
+    provider: string;
+    apiKey: string;
+    model: string;
+  };
 }
 
 export interface SavedQuestion {

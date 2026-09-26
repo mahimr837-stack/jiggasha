@@ -51,7 +51,7 @@ export const TopConfigBar: React.FC<TopConfigBarProps> = ({
                   {currentUser.avatarUrl ? (
                     <img src={currentUser.avatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    (currentUser.name || currentUser.email || 'S').charAt(0)
+                    (currentUser.name || currentUser.email || 'U').charAt(0)
                   )}
                 </div>
                 <span className="hidden sm:inline truncate max-w-[120px] font-mono">

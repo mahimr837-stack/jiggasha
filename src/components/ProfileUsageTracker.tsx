@@ -211,6 +211,11 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
     }
   };
 
+  const handleSelectDateString = (dateStr: string) => {
+    setSelectedDateStr(dateStr);
+    fetchDateUsage(dateStr);
+  };
+
   const handleSelectDay = (day: {
     dayNumber: number;
     isCurrentMonth: boolean;
@@ -219,17 +224,86 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
     isBeforeAccount: boolean;
   }) => {
     if (!day.isCurrentMonth || day.isFuture || !day.dateStr) return;
-
-    setSelectedDateStr(day.dateStr);
-    setActiveTab(null); // Clear active tab as requested
-    fetchDateUsage(day.dateStr);
+    handleSelectDateString(day.dateStr);
   };
 
   const handleSelectTab = (tab: 'today' | 'week' | 'month') => {
     setActiveTab(tab);
-    setSelectedDateStr(null);
-    setQueriedDateData(null);
+    if (tab === 'today') {
+      const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+      setSelectedDateStr(todayStr);
+      fetchDateUsage(todayStr);
+    } else {
+      setSelectedDateStr(null);
+      setQueriedDateData(null);
+    }
   };
+
+  // Past 7 Days data for Week Tab
+  const past7Days = useMemo(() => {
+    const days = [];
+    const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(currentYear, currentMonth, currentDay);
+      d.setDate(d.getDate() - i);
+
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dayNum = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${dayNum}`;
+
+      let dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      if (dateStr === todayStr) dayName = 'Today';
+
+      let count = 0;
+      if (dateStr === todayStr) {
+        count = questionsUsedToday;
+      } else {
+        let hash = 0;
+        for (let j = 0; j < dateStr.length; j++) {
+          hash = (hash * 31 + dateStr.charCodeAt(j)) % 10007;
+        }
+        count = dateStr < ACCOUNT_CREATION_DATE ? 0 : (hash % 5 === 0 ? 0 : (hash % 28) + 4);
+      }
+
+      days.push({ dayName, dateStr, count, isToday: dateStr === todayStr });
+    }
+    return days;
+  }, [currentYear, currentMonth, currentDay, questionsUsedToday]);
+
+  // Current Month days breakdown for Month Tab
+  const monthDays = useMemo(() => {
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+    const days = [];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const isToday = d === currentDay;
+      const isFuture = d > currentDay;
+
+      let count = 0;
+      if (isToday) {
+        count = questionsUsedToday;
+      } else if (!isFuture) {
+        let hash = 0;
+        for (let j = 0; j < dateStr.length; j++) {
+          hash = (hash * 31 + dateStr.charCodeAt(j)) % 10007;
+        }
+        count = dateStr < ACCOUNT_CREATION_DATE ? 0 : (hash % 5 === 0 ? 0 : (hash % 32) + 3);
+      }
+
+      days.push({
+        dayNumber: d,
+        dateStr,
+        count,
+        isToday,
+        isFuture,
+      });
+    }
+    return days;
+  }, [currentYear, currentMonth, currentDay, questionsUsedToday]);
 
   return (
     <div className={`border border-[var(--theme-border)] rounded-xl p-4 sm:p-5 bg-[var(--theme-bg-surface)] shadow-xs transition-colors duration-200 ${className}`}>
@@ -400,7 +474,7 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
               <strong className="text-[var(--theme-text-primary)] font-medium">
                 {queriedDateData ? queriedDateData.count : 0}
               </strong>{' '}
-              / {maxQuestions} questions used
+              / {maxQuestions} prompts used
             </div>
           </div>
 
@@ -415,8 +489,8 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              <h4 className="text-sm sm:text-base font-semibold text-[var(--theme-text-primary)] font-serif tracking-tight">
-                Click any green box to open that question
+              <h4 className="text-sm font-semibold text-[var(--theme-text-primary)] font-sans tracking-tight">
+                Click any box to open that prompt
               </h4>
               <QuestionUsageTracker
                 questionsUsedToday={queriedDateData?.count ?? 0}
@@ -435,8 +509,8 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
       {/* VIEW 2: TODAY TAB */}
       {activeTab === 'today' && !selectedDateStr && (
         <div className="space-y-3 animate-fade-in pt-1">
-          <h4 className="text-sm sm:text-base font-semibold text-[var(--theme-text-primary)] font-serif tracking-tight">
-            Click any green box to open that question
+          <h4 className="text-sm font-semibold text-[var(--theme-text-primary)] font-sans tracking-tight">
+            Click any box to open that prompt
           </h4>
 
           <QuestionUsageTracker
@@ -456,30 +530,29 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
         <div className="space-y-3 animate-fade-in">
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-[var(--theme-text-primary)]">
-              Past 7 Days Study Volume
+              Past 7 Days Volume
             </span>
             <span className="font-mono text-xs text-[var(--theme-primary-green)] font-semibold">
-              {questionsUsedToday + 42} questions solved
+              {past7Days.reduce((acc, d) => acc + d.count, 0)} prompts total
             </span>
           </div>
 
           {/* 7-day mini distribution */}
           <div className="grid grid-cols-7 gap-1.5 py-1">
-            {[
-              { day: 'Fri', count: 14 },
-              { day: 'Sat', count: 0 },
-              { day: 'Sun', count: 8 },
-              { day: 'Mon', count: 12 },
-              { day: 'Tue', count: 5 },
-              { day: 'Wed', count: 3 },
-              { day: 'Today', count: questionsUsedToday },
-            ].map((item, idx) => (
-              <div
+            {past7Days.map((item, idx) => (
+              <button
                 key={idx}
-                className="flex flex-col items-center gap-1 p-2 bg-[var(--theme-bg-subtle)] border border-[var(--theme-border)] rounded-lg text-center"
+                type="button"
+                onClick={() => handleSelectDateString(item.dateStr)}
+                title={`Click to open prompt grid for ${item.dayName} (${item.dateStr})`}
+                className={`flex flex-col items-center gap-1 p-2 border rounded-lg text-center cursor-pointer transition-all ${
+                  selectedDateStr === item.dateStr
+                    ? 'bg-[var(--theme-green-tint)] border-[var(--theme-primary-green)] shadow-xs font-semibold'
+                    : 'bg-[var(--theme-bg-subtle)] hover:bg-[var(--theme-bg-surface)] border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/60'
+                }`}
               >
                 <span className="text-[10px] text-[var(--theme-text-secondary)] font-mono uppercase">
-                  {item.day}
+                  {item.dayName}
                 </span>
                 <span className="text-xs font-semibold font-mono text-[var(--theme-text-primary)]">
                   {item.count}
@@ -487,16 +560,12 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
                 <div className="w-full bg-[var(--theme-border)] h-1.5 rounded-full overflow-hidden">
                   <div
                     className="bg-[var(--theme-primary-green)] h-full rounded-full transition-all"
-                    style={{ width: `${Math.min((item.count / 30) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((item.count / 50) * 100, 100)}%` }}
                   />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
-
-          <p className="text-[11px] text-[var(--theme-text-secondary)] font-mono">
-            Weekly average: ~{Math.round((questionsUsedToday + 42) / 7)} questions/day across textbook physics and math modules.
-          </p>
         </div>
       )}
 
@@ -505,31 +574,41 @@ export const ProfileUsageTracker: React.FC<ProfileUsageTrackerProps> = ({
         <div className="space-y-3 animate-fade-in">
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-[var(--theme-text-primary)]">
-              {MONTH_NAMES[currentMonth]} {currentYear} Monthly Summary
+              {MONTH_NAMES[currentMonth]} {currentYear} Days Breakdown
             </span>
             <span className="font-mono text-xs text-[var(--theme-primary-green)] font-semibold">
-              {questionsUsedToday + 164} total questions
+              {monthDays.reduce((acc, d) => acc + d.count, 0)} total prompts
             </span>
           </div>
 
-          <div className="p-3 bg-[var(--theme-bg-subtle)] rounded-lg border border-[var(--theme-border)] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-[var(--theme-text-secondary)]">Active Study Days:</span>
-              <span className="font-mono font-medium text-[var(--theme-text-primary)]">19 days</span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-[var(--theme-text-secondary)]">Highest Single-Day Volume:</span>
-              <span className="font-mono font-medium text-[var(--theme-text-primary)]">34 questions</span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-[var(--theme-text-secondary)]">Most Investigated Subject:</span>
-              <span className="font-mono font-medium text-[var(--theme-primary-green)]">Physics 1st Paper</span>
-            </div>
+          {/* Grid of days in month */}
+          <div className="grid grid-cols-7 sm:grid-cols-10 gap-1.5 py-1">
+            {monthDays.map((d) => (
+              <button
+                key={d.dayNumber}
+                type="button"
+                disabled={d.isFuture}
+                onClick={() => handleSelectDateString(d.dateStr)}
+                title={
+                  d.isFuture
+                    ? `Day ${d.dayNumber} (Future)`
+                    : `Click to open day ${d.dayNumber} prompt grid (${d.count} prompts)`
+                }
+                className={`p-1.5 rounded-lg border text-center font-mono text-xs flex flex-col items-center justify-center transition-all ${
+                  d.isFuture
+                    ? 'opacity-30 border-[var(--theme-border)] bg-transparent cursor-not-allowed text-[var(--theme-text-secondary)]'
+                    : selectedDateStr === d.dateStr
+                    ? 'bg-[var(--theme-primary-green)] text-white border-[var(--theme-primary-green)] font-bold shadow-xs'
+                    : d.isToday
+                    ? 'bg-[var(--theme-green-tint)] text-[var(--theme-primary-green)] border-[var(--theme-primary-green)]/40 hover:bg-[var(--theme-primary-green)] hover:text-white cursor-pointer font-semibold'
+                    : 'bg-[var(--theme-bg-subtle)] hover:bg-[var(--theme-bg-surface)] border-[var(--theme-border)] hover:border-[var(--theme-primary-green)]/60 text-[var(--theme-text-primary)] cursor-pointer'
+                }`}
+              >
+                <span className="text-[10px] text-[var(--theme-text-secondary)]">{d.dayNumber}</span>
+                <span className="font-bold text-[11px]">{d.count}</span>
+              </button>
+            ))}
           </div>
-
-          <p className="text-[11px] text-[var(--theme-text-secondary)] font-mono">
-            Tip: Use the date picker above to inspect full 50-box grid breakdowns for any specific day this month.
-          </p>
         </div>
       )}
     </div>

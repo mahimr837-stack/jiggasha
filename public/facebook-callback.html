@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Facebook Authentication</title>
+</head>
+<body style="font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc;">
+  <div style="text-align: center; padding: 20px;">
+    <p style="font-size: 14px; margin: 0;">Completing Facebook login...</p>
+  </div>
+  <script>
+    // Parse both hash and query parameters from Meta OAuth response
+    const hash = window.location.hash.substring(1);
+    const search = window.location.search.substring(1);
+    const hashParams = new URLSearchParams(hash);
+    const queryParams = new URLSearchParams(search);
+
+    const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+    const error =
+      queryParams.get('error_description') ||
+      queryParams.get('error_message') ||
+      hashParams.get('error_description') ||
+      queryParams.get('error_reason') ||
+      queryParams.get('error') ||
+      hashParams.get('error');
+
+    if (accessToken) {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'FB_AUTH_SUCCESS', token: accessToken }, '*');
+      }
+      window.close();
+    } else if (error) {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'FB_AUTH_ERROR', error: error }, '*');
+      }
+      window.close();
+    }
+  </script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { WorkspaceTurn, SourceItem, UserAccount, SavedQuestion } from '../types';
 import { Copy, Check, RefreshCw, CornerDownLeft, ArrowRight, Flag, X, Bookmark, Plus, Image as ImageIcon, FileText } from 'lucide-react';
 import { QuestionUsageTracker } from './QuestionUsageTracker';
+import { GroundingFeaturesDropdown } from './GroundingFeaturesDropdown';
 
 const REPORT_REASONS = [
   'Wrong answer',
@@ -228,52 +229,29 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const samples = [
     {
-      title: 'Physics 1st Paper · Projectiles',
-      prompt: 'A stone is projected at an angle of 30° with an initial velocity of 40 m/s from a cliff of height 20 m. Calculate the time of flight and horizontal range.',
+      title: 'Concept Explanation',
+      prompt: 'Explain quantum computing in simple terms for a general audience.',
     },
     {
-      title: 'Physics 2nd Paper · Carnot Cycle',
-      prompt: 'A Carnot engine operates between heat reservoirs at 500 K and 300 K. It absorbs 1200 J of heat per cycle. Calculate its efficiency and work done per cycle.',
+      title: 'Performance & Optimization',
+      prompt: 'What are key strategies for optimizing web application performance?',
     },
     {
-      title: 'Linear Algebra · Eigenvalues',
-      prompt: 'Find the eigenvalues and corresponding eigenvectors of the matrix A = [[4, 2], [1, 3]].',
+      title: 'Creative Analysis',
+      prompt: 'Write a concise analysis comparing renewable and non-renewable energy.',
     },
     {
-      title: 'Physics 2nd Paper · Faraday Induction',
-      prompt: 'A circular coil of 50 turns with radius 0.1 m lies in a perpendicular magnetic field increasing at 0.5 T/s. Calculate the induced electromotive force.',
+      title: 'Logic & Code',
+      prompt: 'How do I implement a binary search algorithm with step-by-step explanation?',
     },
   ];
 
   const renderExplanationContent = (text: string) => {
-    // Check if the explanation has an Authoritative Grounding Note or Citation
-    const groundingRegex = /(Authoritative Grounding Note:[\s\S]*)/i;
-    const parts = text.split(groundingRegex);
-
     return (
       <div className="space-y-3">
-        {parts.map((part, idx) => {
-          if (/^Authoritative Grounding Note:/i.test(part.trim())) {
-            const body = part.replace(/^Authoritative Grounding Note:\s*/i, '').trim();
-            return (
-              <div
-                key={idx}
-                className="bg-[var(--theme-terracotta-tint)] border-l-4 border-[var(--theme-terracotta)] p-3.5 rounded-r-[10px] my-3 text-xs sm:text-sm leading-relaxed text-[var(--theme-text-primary)]"
-              >
-                <div className="text-[var(--theme-terracotta)] font-mono font-semibold text-[11px] uppercase tracking-wider mb-1">
-                  Authoritative Grounding Note
-                </div>
-                <div className="whitespace-pre-line">{body}</div>
-              </div>
-            );
-          }
-          if (!part.trim()) return null;
-          return (
-            <div key={idx} className="text-[var(--theme-text-primary)] text-sm leading-relaxed whitespace-pre-line font-sans">
-              {part.trim()}
-            </div>
-          );
-        })}
+        <div className="text-[var(--theme-text-primary)] text-sm leading-relaxed whitespace-pre-line font-sans">
+          {text.trim()}
+        </div>
       </div>
     );
   };
@@ -308,10 +286,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 value={initialInput}
                 onChange={(e) => setInitialInput(e.target.value)}
                 onKeyDown={handleKeyDownInitial}
-                placeholder="Enter problem, textbook equation, or question to investigate..."
+                placeholder=""
                 rows={5}
-                aria-label="Question or problem formulation"
-                className="workspace-input-field w-full bg-transparent resize-none focus:outline-none text-[var(--theme-text-primary)] text-sm leading-relaxed placeholder:text-[var(--theme-text-secondary)]/60"
+                aria-label="Message prompt"
+                className="workspace-input-field w-full bg-transparent resize-none focus:outline-none text-[var(--theme-text-primary)] text-sm leading-relaxed"
               />
 
               {/* Attachment Previews */}
@@ -413,16 +391,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   disabled={(!initialInput.trim() && attachedFilesInitial.length === 0) || isLoading || questionsUsedToday >= 50}
                   className="h-9 px-4 bg-[var(--theme-primary-green)] hover:bg-[var(--theme-primary-green-hover)] disabled:bg-[var(--theme-border)] disabled:text-[var(--theme-text-secondary)] text-white rounded-[10px] text-xs font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <span>Investigate</span>
+                  <span>Send</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Sample Curated Curriculum Queries */}
+            {/* Suggested Prompts */}
             <div className="mt-8">
               <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)] mb-3 select-none">
-                Curriculum Reference Problems
+                Suggested Prompts
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {samples.map((sample, idx) => (
@@ -465,11 +443,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   <div className="border-l-2 border-[var(--theme-primary-green)] pl-3.5 py-0.5">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--theme-text-secondary)]">
-                        Student Query #{turnIdx + 1}
+                        Prompt #{turnIdx + 1}
                       </span>
                       {isTurnHighlighted && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-[var(--theme-primary-green)] bg-[var(--theme-green-tint)] px-2 py-0.5 rounded-full">
-                          Target Question ✓
+                          Target Query ✓
                         </span>
                       )}
                     </div>
@@ -481,11 +459,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   {/* Structured Output Card */}
                   {turn.response ? (
                     <div className="workspace-output-box border border-[var(--theme-border)] rounded-xl p-5 sm:p-6 bg-[var(--theme-bg-surface)] space-y-6 shadow-xs">
-                    {/* SECTION 1: QUESTION */}
+                    {/* SECTION 1: QUERY */}
                     <section className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h2 className="text-[11px] font-mono uppercase tracking-widest font-semibold text-[var(--theme-text-secondary)]">
-                          QUESTION
+                          QUERY
                         </h2>
                       </div>
                       <div className="text-[var(--theme-text-primary)] text-sm leading-relaxed whitespace-pre-line font-sans">
@@ -495,11 +473,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
                     <hr className="border-[var(--theme-border)]" />
 
-                    {/* SECTION 2: SOLUTION */}
+                    {/* SECTION 2: RESPONSE */}
                     <section className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h2 className="text-[11px] font-mono uppercase tracking-widest font-semibold text-[var(--theme-text-primary)]">
-                          SOLUTION
+                          RESPONSE
                         </h2>
                       </div>
                       <div className="text-[var(--theme-text-primary)] text-sm leading-relaxed whitespace-pre-line font-sans">
@@ -507,17 +485,24 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                       </div>
                     </section>
 
-                    <hr className="border-[var(--theme-border)]" />
+                    {turn.response.explanation && (
+                      <>
+                        <hr className="border-[var(--theme-border)]" />
 
-                    {/* SECTION 3: EXPLANATION */}
-                    <section className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-[11px] font-mono uppercase tracking-widest font-semibold text-[var(--theme-text-secondary)]">
-                          EXPLANATION
-                        </h2>
-                      </div>
-                      {renderExplanationContent(turn.response.explanation)}
-                    </section>
+                        {/* SECTION 3: DETAILS */}
+                        <section className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-[11px] font-mono uppercase tracking-widest font-semibold text-[var(--theme-text-secondary)]">
+                              DETAILS
+                            </h2>
+                          </div>
+                          {renderExplanationContent(turn.response.explanation)}
+                        </section>
+                      </>
+                    )}
+
+                    {/* Features & Grounding Used Dropdown */}
+                    <GroundingFeaturesDropdown groundingInfo={turn.response.groundingInfo} />
 
                     {/* Subtle Action Row - Icon Only Aesthetic Controls */}
                     <div className="pt-3 border-t border-[var(--theme-border)] text-xs select-none">
@@ -687,13 +672,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     </div>
                   </div>
                 ) : turn.status === 'generating' || turn.status === 'retrieving' ? (
-                  <div className="border border-[var(--theme-border)] rounded-xl p-6 bg-[var(--theme-bg-surface)] space-y-3 shadow-xs">
-                    <div className="flex items-center gap-2 text-xs text-[var(--theme-text-secondary)] font-mono">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[var(--theme-primary-green)] animate-pulse" />
-                      <span>Synthesizing derivation & solution...</span>
-                    </div>
-                    <div className="h-2 w-3/4 bg-[var(--theme-border)]/70 rounded animate-pulse" />
-                    <div className="h-2 w-1/2 bg-[var(--theme-border)]/70 rounded animate-pulse" />
+                  <div
+                    className="py-1 px-0.5 text-xs font-mono text-[var(--theme-text-secondary)] select-none"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span
+                      key={turn.processingStage || 'searching'}
+                      className="processing-status-text inline-block"
+                    >
+                      {turn.processingStage === 'thinking'
+                        ? 'Thinking…'
+                        : turn.processingStage === 'preparing'
+                        ? 'Preparing answer…'
+                        : 'Searching sources…'}
+                    </span>
                   </div>
                 ) : turn.status === 'error' ? (
                   <div className="border border-rose-200 rounded-xl p-4 text-xs text-rose-700 bg-rose-50 font-mono">
@@ -703,14 +696,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               </div>
             );
           })}
-
-            {/* Loading Indicator when a new turn is being processed */}
-            {isLoading && turns[turns.length - 1]?.status !== 'generating' && (
-              <div className="border border-[var(--theme-border)] rounded-xl p-4 text-xs text-[var(--theme-text-secondary)] font-mono flex items-center gap-2 bg-[var(--theme-bg-surface)] shadow-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--theme-primary-green)] animate-pulse" />
-                <span>Processing investigation...</span>
-              </div>
-            )}
 
             {/* Follow-up Question Box at the bottom of the workspace */}
             <div className="mt-8 pt-4 border-t border-[var(--theme-border)]">
@@ -737,10 +722,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                   value={followUpInput}
                   onChange={(e) => setFollowUpInput(e.target.value)}
                   onKeyDown={handleKeyDownFollowUp}
-                  placeholder="Ask a follow-up, test a parameter variation, or explore edge cases..."
+                  placeholder=""
                   rows={2}
-                  aria-label="Follow-up question or variation"
-                  className="workspace-input-field w-full bg-transparent resize-none focus:outline-none text-[var(--theme-text-primary)] text-xs sm:text-sm leading-relaxed placeholder:text-[var(--theme-text-secondary)]/60"
+                  aria-label="Follow-up prompt"
+                  className="workspace-input-field w-full bg-transparent resize-none focus:outline-none text-[var(--theme-text-primary)] text-xs sm:text-sm leading-relaxed"
                 />
 
                 {/* Attachment Previews */}

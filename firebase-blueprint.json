@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Account and API Key Settings",
+      "description": "User profile, provider selection, model choice, and API key settings",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User account document indexed strictly by Firebase Auth UID"
+    }
+  }
+}

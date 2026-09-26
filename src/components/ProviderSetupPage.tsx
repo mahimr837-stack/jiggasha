@@ -21,13 +21,13 @@ export const ProviderSetupPage: React.FC<ProviderSetupPageProps> = ({
 }) => {
   const [provider, setProvider] = useState(config.provider || 'Gemini');
   const [apiKey, setApiKey] = useState(config.customApiKey || '');
-  const [model, setModel] = useState(config.model || 'gemini-3.8-flash');
+  const [model, setModel] = useState(config.model || 'gemini-3.1-flash-lite');
   const [showKey, setShowKey] = useState(false);
 
   const modelOptionsByProvider: Record<string, { id: string; name: string }[]> = {
     Gemini: [
-      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Recommended)' },
-      { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (High Speed)' },
+      { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite (Fast & Reliable)' },
+      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' },
     ],
     OpenAI: [
       { id: 'gpt-4o', name: 'GPT-4o' },
@@ -74,7 +74,7 @@ export const ProviderSetupPage: React.FC<ProviderSetupPageProps> = ({
         <div className="mb-6 rounded-2xl overflow-hidden border border-[var(--theme-border)] shadow-sm bg-[var(--theme-bg-surface)]">
           <img
             src={apiKeyBanner}
-            alt="কন্ট্রোলটা নিজের হাতে। প্রশ্নটা হোক নিজের।"
+            alt="AI Workspace"
             className="w-full h-auto object-cover rounded-2xl block select-none"
             referrerPolicy="no-referrer"
           />
